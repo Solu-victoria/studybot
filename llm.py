@@ -1,6 +1,7 @@
 import os
 import json
 from openai import OpenAI
+import traceback
 
 # Create a Gemini client using OpenAI library
 client = OpenAI(
@@ -44,10 +45,14 @@ def process_message_with_llm(message):
 
     try:
         response = ask_llm(prompt)
+        print("LLM raw response:", repr(response))  # <-- this shows empty or malformed response
         data = json.loads(response)
         return data.get("answer"), data.get("reminder_data")
+    except json.JSONDecodeError:
+        print("JSON decode failed. Response was:", repr(response))
+        traceback.print_exc()
+        return "Sorry, I couldn't understand your message.", None
     except Exception as e:
         print("LLM processing failed:", e)
-        import traceback
         traceback.print_exc()
         return "Sorry, I couldn't understand your message.", None
