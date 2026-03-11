@@ -48,4 +48,6 @@ def process_message_with_llm(message):
         return data.get("answer"), data.get("reminder_data")
     except Exception as e:
         print("LLM processing failed:", e)
+        import traceback
+        traceback.print_exc()
         return "Sorry, I couldn't understand your message.", None
