@@ -45,14 +45,25 @@ def process_message_with_llm(message):
 
     try:
         response = ask_llm(prompt)
-        print("LLM raw response:", repr(response))  # <-- this shows empty or malformed response
+        print("LLM raw response:", repr(response))
+
+        # Strip Markdown code fences if present
+        if response.startswith("```") and "```" in response[3:]:
+            response = response.split("```")[-2].strip()  # take the content inside ``` ```
+
+        # Parse JSON
         data = json.loads(response)
-        return data.get("answer"), data.get("reminder_data")
+        answer = data.get("answer", "Sorry, I couldn't understand your message.")
+        reminder_data = data.get("reminder_data")
     except json.JSONDecodeError:
         print("JSON decode failed. Response was:", repr(response))
         traceback.print_exc()
-        return "Sorry, I couldn't understand your message.", None
+        answer = "Sorry, I couldn't understand your message."
+        reminder_data = None
     except Exception as e:
         print("LLM processing failed:", e)
         traceback.print_exc()
-        return "Sorry, I couldn't understand your message.", None
+        answer = "Sorry, I couldn't understand your message."
+        reminder_data = None
+
+    return answer, reminder_data
