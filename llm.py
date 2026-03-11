@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from openai import OpenAI
 import traceback
 
@@ -47,9 +48,12 @@ def process_message_with_llm(message):
         response = ask_llm(prompt)
         print("LLM raw response:", repr(response))
 
-        # Strip Markdown code fences if present
-        if response.startswith("```") and "```" in response[3:]:
-            response = response.split("```")[-2].strip()  # take the content inside ``` ```
+        # Strip code fences completely
+        match = re.search(r"```(?:json)?\s*(\{.*\})\s*```", response, re.DOTALL)
+        if match:
+            response = match.group(1)
+        else:
+            response = response.strip()  # fallback: remove leading/trailing whitespace
 
         # Parse JSON
         data = json.loads(response)
