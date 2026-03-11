@@ -10,58 +10,67 @@ client = Client(
     os.getenv("TWILIO_AUTH_TOKEN")
 )
 
-def send_reminder(phone):
-
-    client.messages.create(
-        body="📚 Study reminder! Time to study.",
-        from_=os.getenv("TWILIO_WHATSAPP_NUMBER"),
-        to=f"whatsapp:{phone}"
-    )
-
-
-def load_reminders():
-
+def send_reminder(reminder_id):
     db = SessionLocal()
+    reminder = db.query(Reminder).filter(Reminder.id == reminder_id, Reminder.active == True).first()
+    if not reminder:
+        db.close()
+        return
 
-    reminders = db.query(Reminder).filter(Reminder.active == True).all()
-
-    for r in reminders:
-
-        scheduler.add_job(
-            send_reminder,
-            "cron",
-            hour=r.hour,
-            minute=r.minute,
-            args=[r.phone],
-            id=str(r.id),
-            replace_existing=True
+    try:
+        client.messages.create(
+            body="📚 Study reminder! Time to study.",
+            from_=os.getenv("TWILIO_WHATSAPP_NUMBER"),
+            to=f"whatsapp:{reminder.phone}"
         )
+        print(f"Reminder sent to {reminder.phone}")
+    except Exception as e:
+        print("Reminder failed:", e)
 
+    # Delete one-off reminders
+    if not reminder.recurring:
+        db.delete(reminder)
+        db.commit()
+        try:
+            scheduler.remove_job(str(reminder_id))
+        except Exception:
+            pass
     db.close()
 
-
-def add_reminder(phone, hour, minute):
-
+def add_reminder(phone, hour, minute, recurring=True):
     db = SessionLocal()
-
     reminder = Reminder(
         phone=phone,
         hour=hour,
-        minute=minute
+        minute=minute,
+        recurring=recurring
     )
-
     db.add(reminder)
     db.commit()
     db.refresh(reminder)
-
     db.close()
 
     scheduler.add_job(
-        send_reminder,
-        "cron",
+        func=send_reminder,
+        trigger="cron",
         hour=hour,
         minute=minute,
-        args=[phone],
+        args=[reminder.id],
         id=str(reminder.id),
         replace_existing=True
     )
+
+def load_reminders():
+    db = SessionLocal()
+    reminders = db.query(Reminder).filter(Reminder.active == True).all()
+    for r in reminders:
+        scheduler.add_job(
+            func=send_reminder,
+            trigger="cron",
+            hour=r.hour,
+            minute=r.minute,
+            args=[r.id],
+            id=str(r.id),
+            replace_existing=True
+        )
+    db.close()
