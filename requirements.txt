@@ -1,7 +1,8 @@
 fastapi
 uvicorn
-requests
+twilio
 apscheduler
-python-dotenv
-psycopg2-binary
 sqlalchemy
+psycopg2-binary
+python-dotenv
+openai
