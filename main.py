@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Form
+from fastapi.responses import Response
 from llm import ask_llm
 from reminders import add_reminder, load_reminders, scheduler
 
@@ -20,16 +21,21 @@ async def whatsapp_webhook(
 
         add_reminder(user_phone, 20, 0)
 
-        return """
+        twiml = """
         <Response>
             <Message>✅ Study reminder set for 8 PM daily.</Message>
         </Response>
         """
 
+        return Response(content=twiml, media_type="application/xml")
+
+
     answer = ask_llm(Body)
 
-    return f"""
+    twiml = f"""
     <Response>
         <Message>{answer}</Message>
     </Response>
     """
+
+    return Response(content=twiml, media_type="application/xml")
